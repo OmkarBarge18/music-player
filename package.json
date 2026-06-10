@@ -1,0 +1,30 @@
+{
+  "name": "aura-music-player",
+  "version": "1.0.0",
+  "description": "Premium music player with advanced library scanning, streaming, and audio controls.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js"
+  },
+  "keywords": [
+    "music",
+    "player",
+    "electron",
+    "streaming"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mime-types": "^2.1.35",
+    "music-metadata": "^7.14.0",
+    "node-id3": "^0.2.6",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

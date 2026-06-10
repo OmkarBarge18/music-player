@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aura Player</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+
+<body>
+    <!-- Titlebar for custom Electron window framing -->
+    <div class="title-bar" id="appTitleBar">
+        <div class="title-bar-drag">
+            <i data-lucide="disc" class="brand-disc-small"></i>
+            <span>Aura Music Player</span>
+        </div>
+        <div class="window-controls">
+            <button class="win-btn" id="winMinBtn"><i data-lucide="minus"></i></button>
+            <button class="win-btn" id="winMaxBtn"><i data-lucide="square"></i></button>
+            <button class="win-btn win-close" id="winCloseBtn"><i data-lucide="x"></i></button>
+        </div>
+    </div>
+
+    <!-- Bottom Player Control Bar will be rendered below -->
+
+    <!-- Web browser hidden input directory loader fallback -->
+    <input type="file" id="webFolderInput" multiple webkitdirectory directory class="hidden-input">
+
+    <!-- Fluid Ambient Animated Backgrounds -->
+    <div class="ambient-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- 3-COLUMN CONSOLE LAYOUT WRAPPER -->
+    <div class="app-container">
+        
+        <!-- COLUMN 1: LEFT SIDEBAR (Nav, Profile, Now Playing Console) -->
+        <aside class="glass-panel sidebar">
+            <div class="brand">
+                <i data-lucide="disc" class="brand-disc"></i>
+                <span>Aura</span>
+            </div>
+            
+            <div class="user-profile-badge" id="profileSelector">
+                <img src="" id="user-avatar" class="avatar" alt="Avatar">
+                <div class="user-details">
+                    <span id="user-display-name">Guest</span>
+                    <span id="user-role-badge">Free User</span>
+                </div>
+                <i data-lucide="chevron-down" class="profile-arrow"></i>
+            </div>
+            
+            <nav class="nav-links">
+                <button class="nav-item active" data-view="home"><i data-lucide="home"></i> Home</button>
+                <button class="nav-item" data-view="lyrics"><i data-lucide="music-3"></i> Lyrics</button>
+                <button class="nav-item" data-view="queue"><i data-lucide="list-music"></i> Play Queue</button>
+                <button class="nav-item" data-view="search"><i data-lucide="search"></i> Search</button>
+                <button class="nav-item" data-view="playlists"><i data-lucide="music-4"></i> Playlists</button>
+                <button class="nav-item" data-view="audiobooks"><i data-lucide="book-open"></i> Audiobooks</button>
+                <button class="nav-item" data-view="stats"><i data-lucide="bar-chart-3"></i> Statistics</button>
+                <button class="nav-item" data-view="settings"><i data-lucide="settings"></i> Settings</button>
+            </nav>
+        </aside>
+
+        <!-- COLUMN 2: CENTER PANEL (Dynamic Subviews Content Area) -->
+        <main class="main-view">
+            
+            <!-- LYRICS VIEW -->
+            <div id="view-lyrics" class="subview">
+                <h2 class="view-header">Lyrics</h2>
+                <div class="lyrics-view-container glass-panel">
+                    <div class="lyrics-scroll-fullscreen" id="largeLyricsScrollArea">
+                        <div class="lyrics-line-fullscreen active">No lyrics available</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- PLAY QUEUE VIEW -->
+            <div id="view-queue" class="subview">
+                <h2 class="view-header">Active Play Queue</h2>
+                <div class="queue-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <span id="queue-tracks-count" style="font-size: 14px; color: var(--text-muted);">0 Tracks</span>
+                    <button class="action-btn border-btn" id="clearQueueBtn" style="padding: 6px 12px; font-size: 13px;"><i data-lucide="trash-2"></i> Clear Queue</button>
+                </div>
+                <div class="library-grid" id="queueListScroll"></div>
+            </div>
+
+            <!-- HOME VIEW -->
+            <div id="view-home" class="subview active">
+                <div class="hero-banner glass-panel">
+                    <div class="hero-text">
+                        <h2>Welcome to Aura Console</h2>
+                        <p>Experience gapless, high-fidelity audio playback with smart library controls and real-time syncing.</p>
+                    </div>
+                </div>
+                
+                <h2 class="view-header">Explore Library</h2>
+                <div class="library-summary-row">
+                    <div class="summary-card glass-panel" data-action="quick-play-all">
+                        <i data-lucide="play" class="card-icon"></i>
+                        <div class="info">
+                            <h3>Play All Tracks</h3>
+                            <p id="home-total-tracks">0 tracks loaded</p>
+                        </div>
+                    </div>
+                    <div class="summary-card glass-panel" id="addFolderBtn">
+                        <i data-lucide="folder-plus" class="card-icon"></i>
+                        <div class="info">
+                            <h3>Add Music Folders</h3>
+                            <p>Register directory path</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Algorithmic Smart Playlists</h3>
+                <div class="smart-playlists-grid" id="smartPlaylistsGrid"></div>
+
+                <h3 class="section-title" style="margin-top: 30px;">All Songs</h3>
+                <div class="track-table-header">
+                    <span>Title</span>
+                    <span>Artist</span>
+                    <span>Album</span>
+                    <span>Format</span>
+                    <span class="align-right">Action</span>
+                </div>
+                <div class="library-grid" id="homeTrackList"></div>
+            </div>
+
+            <!-- SEARCH VIEW -->
+            <div id="view-search" class="subview">
+                <h2 class="view-header">Advanced Library Search</h2>
+                <div class="search-controls glass-panel">
+                    <div class="search-bar-wrapper">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="Search title, artist, album, genre...">
+                    </div>
+                    <button class="toggle-advanced-btn" id="toggleAdvancedFiltersBtn">
+                        <i data-lucide="sliders-horizontal"></i> Filters
+                    </button>
+                </div>
+                
+                <div class="advanced-filters-panel glass-panel hidden" id="advancedFiltersPanel">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label>Title</label>
+                            <input type="text" id="filterTitle" placeholder="Song title">
+                        </div>
+                        <div class="filter-group">
+                            <label>Artist</label>
+                            <input type="text" id="filterArtist" placeholder="Artist name">
+                        </div>
+                        <div class="filter-group">
+                            <label>Album</label>
+                            <input type="text" id="filterAlbum" placeholder="Album name">
+                        </div>
+                        <div class="filter-group">
+                            <label>Genre</label>
+                            <input type="text" id="filterGenre" placeholder="e.g. Jazz, Pop">
+                        </div>
+                        <div class="filter-group">
+                            <label>Year</label>
+                            <input type="number" id="filterYear" placeholder="e.g. 1995">
+                        </div>
+                        <div class="filter-group">
+                            <label>BPM</label>
+                            <input type="number" id="filterBpm" placeholder="e.g. 120">
+                        </div>
+                        <div class="filter-group">
+                            <label>Mood</label>
+                            <select id="filterMood">
+                                <option value="">Select Mood</option>
+                                <option value="relaxing">Relaxing / Chill</option>
+                                <option value="energetic">Energetic / Workout</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Lyrics Contains</label>
+                            <input type="text" id="filterLyrics" placeholder="Lyrics keyword">
+                        </div>
+                    </div>
+                    <button class="action-btn" id="applyFiltersBtn">Apply Filters</button>
+                </div>
+
+                <div class="track-table-header">
+                    <span>Title</span>
+                    <span>Artist</span>
+                    <span>Album</span>
+                    <span>Format</span>
+                    <span class="align-right">Action</span>
+                </div>
+                <div class="library-grid" id="trackList"></div>
+            </div>
+
+            <!-- PLAYLISTS VIEW -->
+            <div id="view-playlists" class="subview">
+                <div class="playlist-header-row">
+                    <h2 class="view-header">Playlists & Collaborations</h2>
+                    <button class="action-btn" id="createPlaylistBtn"><i data-lucide="plus"></i> New Playlist</button>
+                </div>
+                <div class="playlist-main-layout">
+                    <div class="playlists-col glass-panel" id="playlistsList"></div>
+                    <div class="playlist-detail-col glass-panel hidden" id="playlistDetailCol">
+                        <div class="detail-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                            <div>
+                                <h3 id="playlist-detail-title">Playlist Name</h3>
+                                <p id="playlist-detail-desc">Playlist Description</p>
+                            </div>
+                            <button class="action-btn border-btn" id="deletePlaylistBtn" style="border-color: #ff453a; color: #ff453a; padding: 6px 12px; margin-top: 4px; flex-shrink: 0;"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Delete</button>
+                        </div>
+                        <div class="track-table-header">
+                            <span>Title</span>
+                            <span>Artist</span>
+                            <span>Album</span>
+                            <span>Format</span>
+                            <span class="align-right">Action</span>
+                        </div>
+                        <div class="playlist-tracks-list" id="playlistTracksList"></div>
+                        
+                        <div class="comments-section" id="playlistCommentsSection">
+                            <h4>Shared Discussion Feed</h4>
+                            <div class="comments-feed" id="commentsFeed"></div>
+                            <div class="comment-input-row">
+                                <input type="text" id="newCommentInput" placeholder="Add a comment to this playlist...">
+                                <button class="action-btn" id="postCommentBtn"><i data-lucide="send"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="version-section" id="playlistVersionSection">
+                            <h4>Playlist Edit Timeline</h4>
+                            <div class="version-timeline" id="versionTimeline"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- AUDIOBOOKS VIEW -->
+            <div id="view-audiobooks" class="subview">
+                <div class="playlist-header-row">
+                    <h2 class="view-header">Audiobook Library</h2>
+                    <button class="action-btn" id="addAudiobookBtn"><i data-lucide="plus"></i> Add Book</button>
+                </div>
+                <div class="audiobooks-grid" id="audiobooksGrid"></div>
+                <div class="audiobook-player-container glass-panel hidden" id="audiobookPlayerContainer">
+                    <button class="back-link-btn" id="closeAudiobookPlayer"><i data-lucide="arrow-left"></i> Back to Books</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <h3 id="selectedBookTitle" style="margin: 0;">Book Title</h3>
+                        <button class="action-btn" id="resumeBookBtn" style="padding: 6px 12px; font-size: 13.5px;"><i data-lucide="play" style="width: 14px; height: 14px; margin-right: 4px;"></i> Resume Playback</button>
+                    </div>
+                    <div class="chapters-layout">
+                        <div class="chapters-col">
+                            <h4>Chapters</h4>
+                            <div class="chapters-list" id="bookChaptersList"></div>
+                        </div>
+                        <div class="bookmarks-col">
+                            <div class="bookmark-header">
+                                <h4>Bookmarks & Resume</h4>
+                                <button class="small-action-btn" id="addBookmarkBtn"><i data-lucide="bookmark"></i> Bookmark Position</button>
+                            </div>
+                            <div class="bookmarks-list" id="bookBookmarksList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIDEOS VIEW REMOVED -->
+
+            <!-- STATISTICS VIEW -->
+            <div id="view-stats" class="subview">
+                <h2 class="view-header">Listening Statistics Dashboard</h2>
+                <div class="stats-row">
+                    <div class="stats-card glass-panel">
+                        <i data-lucide="clock" class="card-icon"></i>
+                        <div class="info">
+                            <h3 id="stats-listening-hours">0 hrs</h3>
+                            <p>Listening Hours</p>
+                        </div>
+                    </div>
+                    <div class="stats-card glass-panel">
+                        <i data-lucide="music" class="card-icon"></i>
+                        <div class="info">
+                            <h3 id="stats-total-tracks">0</h3>
+                            <p>Library Size</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="charts-layout">
+                    <div class="chart-card glass-panel">
+                        <h3>Genre Distribution</h3>
+                        <canvas id="genreChart" width="300" height="200"></canvas>
+                    </div>
+                    <div class="chart-card glass-panel">
+                        <h3>Top Artists Play Count</h3>
+                        <canvas id="artistChart" width="300" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <div class="top-ranking-row">
+                    <div class="ranking-card glass-panel">
+                        <h3>Top Tracks Overall</h3>
+                        <ol id="topTracksRankList"></ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SOCIAL VIEW REMOVED -->
+
+            <!-- SETTINGS VIEW -->
+            <div id="view-settings" class="subview">
+                <h2 class="view-header">System Settings</h2>
+                
+                <div class="settings-card glass-panel">
+                    <h3>Folder Libraries</h3>
+                    <p class="description">Add folders to index your music files recursively.</p>
+                    <div class="registered-folders-list" id="settingsFoldersList">
+                        <div class="folder-item">No folders registered.</div>
+                    </div>
+                    <div class="button-row">
+                        <button class="action-btn" id="settingsAddFolderBtn"><i data-lucide="folder-plus"></i> Add Folder</button>
+                        <button class="action-btn border-btn" id="triggerScanBtn"><i data-lucide="refresh-cw"></i> Scan Now</button>
+                    </div>
+                </div>
+
+                <div class="settings-card glass-panel">
+                    <h3>Smart File Reorganization</h3>
+                    <p class="description">Copies your scanned library tracks organized into a clean <code>[Artist]/[Album]/[Title].[ext]</code> folders structure.</p>
+                    <div class="input-group">
+                        <label>Destination Path</label>
+                        <input type="text" id="reorganizeDestInput" placeholder="C:\Games\music player\organized_library">
+                    </div>
+                    <button class="action-btn" id="reorganizeBtn"><i data-lucide="folder-git-2"></i> Organize Library</button>
+                </div>
+
+                <div class="settings-card glass-panel">
+                    <h3>Audiophile DAC Output Routing</h3>
+                    <p class="description">Routes audio output directly to selected DACs or audio interfaces.</p>
+                    <div class="input-group">
+                        <label>Hardware Device</label>
+                        <select id="audioOutputSelector">
+                            <option value="default">Default System Device</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="bitPerfectToggle">
+                        <label for="bitPerfectToggle">
+                            <strong>Bit-Perfect Mode (Hi-Res Bypass)</strong><br>
+                            <span class="description">Bypasses the equalizer and volume nodes to route source PCM directly.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-card glass-panel">
+                    <h3>Interface Styling Theme</h3>
+                    <div class="theme-picker-row" style="flex-wrap: wrap; gap: 8px;">
+                        <button class="theme-btn active" data-theme="dark">Glass Obsidian</button>
+                        <button class="theme-btn" data-theme="amoled">AMOLED Dark</button>
+                        <button class="theme-btn" data-theme="light">Acrylic Light</button>
+                        <button class="theme-btn" data-theme="abyss">Abyss</button>
+                        <button class="theme-btn" data-theme="medieval">Medieval</button>
+                        <button class="theme-btn" data-theme="catppuccin">Catppuccin</button>
+                        <button class="theme-btn" data-theme="sunset">Sunset Glow</button>
+                        <button class="theme-btn" data-theme="forest">Forest Moss</button>
+                        <button class="theme-btn" data-theme="cyberpunk">Cyberpunk Neon</button>
+                        <button class="theme-btn" data-theme="vaporwave">Vaporwave 80s</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+
+    </div>
+
+    <!-- Active Player Control Bar removed from footer -->
+
+    <!-- SLEEP TIMER MODAL DIALOG -->
+    <div class="modal-overlay hidden" id="sleepTimerModal">
+        <div class="modal-content glass-panel">
+            <h3>Configure Sleep Timer</h3>
+            <div class="modal-body">
+                <p>Timer will fade out audio and pause playback when finished.</p>
+                <div class="timer-presets">
+                    <button class="preset-btn" data-time="5">5 Min</button>
+                    <button class="preset-btn" data-time="15">15 Min</button>
+                    <button class="preset-btn" data-time="30">30 Min</button>
+                    <button class="preset-btn" data-time="60">60 Min</button>
+                </div>
+                <div class="input-group">
+                    <label>Or custom minutes</label>
+                    <input type="number" id="customSleepMinutes" placeholder="Minutes">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn border-btn" id="cancelSleepBtn">Cancel Timer</button>
+                <button class="action-btn" id="startSleepBtn">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- METADATA EDITOR MODAL DIALOG -->
+    <div class="modal-overlay hidden" id="metadataModal">
+        <div class="modal-content glass-panel">
+            <h3>Edit Track Metadata Tags</h3>
+            <div class="modal-body scrollable-modal-body">
+                <div class="input-group">
+                    <label>Title</label>
+                    <input type="text" id="editMetaTitle">
+                </div>
+                <div class="input-group">
+                    <label>Artist</label>
+                    <input type="text" id="editMetaArtist">
+                </div>
+                <div class="input-group">
+                    <label>Album</label>
+                    <input type="text" id="editMetaAlbum">
+                </div>
+                <div class="input-group">
+                    <label>Genre</label>
+                    <input type="text" id="editMetaGenre">
+                </div>
+                <div class="input-group">
+                    <label>Year</label>
+                    <input type="number" id="editMetaYear">
+                </div>
+                <div class="input-group">
+                    <label>BPM</label>
+                    <input type="number" id="editMetaBpm">
+                </div>
+                <div class="input-group">
+                    <label>Composer</label>
+                    <input type="text" id="editMetaComposer">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn border-btn" id="closeMetaBtn">Cancel</button>
+                <button class="action-btn" id="saveMetaBtn">Save Tags</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- USER FAMILY ACCOUNTS LOGIN SELECTOR MODAL -->
+    <div class="modal-overlay hidden" id="userLoginModal">
+        <div class="modal-content glass-panel">
+            <h3>Switch User Profile</h3>
+            <div class="user-profiles-list" id="loginProfilesList"></div>
+            
+            <!-- Add Profile inline form (initially hidden) -->
+            <div class="add-profile-form hidden" id="addProfileFormSection" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
+                <h4 style="font-size: 13px; font-weight: 600;">Create New Profile</h4>
+                <div class="input-group">
+                    <label>Profile Name</label>
+                    <input type="text" id="newProfileName" placeholder="e.g. Alice">
+                </div>
+                <div class="input-group">
+                    <label>Avatar URL (Optional)</label>
+                    <input type="text" id="newProfileAvatar" placeholder="https://images.unsplash.com/... or leave blank">
+                </div>
+                <div class="button-row" style="margin-top: 10px; display: flex; gap: 8px;">
+                    <button class="action-btn" id="saveNewProfileBtn">Create</button>
+                    <button class="action-btn border-btn" id="cancelAddProfileBtn">Cancel</button>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="action-btn" id="addNewProfileBtn"><i data-lucide="plus"></i> Add Profile</button>
+                <button class="action-btn border-btn" id="closeLoginBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HIDDEN INPUT FILE PICKER FOR AUDIOBOOKS -->
+    <input type="file" id="bookFilesInput" multiple class="hidden-input">
+
+    <!-- CREATE PLAYLIST MODAL -->
+    <div class="modal-overlay hidden" id="playlistCreateModal">
+        <div class="modal-content glass-panel">
+            <h3>Create New Playlist</h3>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Playlist Name</label>
+                    <input type="text" id="newPlaylistName" placeholder="My Awesome Playlist">
+                </div>
+                <div class="input-group" style="margin-top: 10px;">
+                    <label>Description</label>
+                    <textarea id="newPlaylistDesc" placeholder="Playlist description (optional)" rows="3" style="width: 100%; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-main); padding: 8px; font-family: inherit; font-size: 13px; resize: none;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn border-btn" id="closePlaylistModalBtn">Cancel</button>
+                <button class="action-btn" id="savePlaylistModalBtn">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD AUDIOBOOK MODAL -->
+    <div class="modal-overlay hidden" id="audiobookModal">
+        <div class="modal-content glass-panel">
+            <h3>Add Audiobook to Library</h3>
+            <div class="modal-body scrollable-modal-body">
+                <div class="input-group">
+                    <label>Title</label>
+                    <input type="text" id="newBookTitle" placeholder="Audiobook Title">
+                </div>
+                <div class="input-group" style="margin-top: 8px;">
+                    <label>Author</label>
+                    <input type="text" id="newBookAuthor" placeholder="Author Name">
+                </div>
+                <div class="input-group" style="margin-top: 8px;">
+                    <label>Cover Art URL</label>
+                    <input type="text" id="newBookCover" placeholder="https://images.unsplash.com/... or leave blank">
+                </div>
+                <div class="input-group" style="margin-top: 8px;">
+                    <label>Source Type</label>
+                    <select id="newBookType">
+                        <option value="file">Single Audiobook File (M4B, MP3, etc.)</option>
+                        <option value="folder">Folder of Chapters (Multiple Files)</option>
+                    </select>
+                </div>
+                <div class="input-group" id="bookFileSelectionArea" style="margin-top: 8px;">
+                    <label>Audio Files</label>
+                    <button class="action-btn border-btn" id="chooseBookFilesBtn" style="width: 100%; justify-content: center;"><i data-lucide="music-3"></i> Select Audio Files</button>
+                    <span id="selectedBookFilesLabel" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; text-align: center; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">No files selected</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn border-btn" id="closeBookModalBtn">Cancel</button>
+                <button class="action-btn" id="saveBookModalBtn">Add Book</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EQUALIZER PANEL FLOATING BOX -->
+    <div class="eq-overlay-panel glass-panel hidden" id="eqPanel">
+        <div class="eq-header">
+            <h4>5-Band Equalizer</h4>
+            <div class="checkbox-row-eq">
+                <input type="checkbox" id="eqBypassToggle">
+                <label for="eqBypassToggle">Bypass EQ</label>
+            </div>
+        </div>
+        <div class="eq-presets-row">
+            <button class="preset-pill active" data-preset="flat">Flat</button>
+            <button class="preset-pill" data-preset="rock">Rock</button>
+            <button class="preset-pill" data-preset="pop">Pop</button>
+            <button class="preset-pill" data-preset="classic">Classic</button>
+            <button class="preset-pill" data-preset="electronic">Vocal</button>
+        </div>
+        <div class="eq-sliders-container">
+            <div class="eq-slider-col">
+                <input type="range" class="eq-slider" min="-12" max="12" value="0" data-band="0" orient="vertical">
+                <span>60Hz</span>
+            </div>
+            <div class="eq-slider-col">
+                <input type="range" class="eq-slider" min="-12" max="12" value="0" data-band="1" orient="vertical">
+                <span>230Hz</span>
+            </div>
+            <div class="eq-slider-col">
+                <input type="range" class="eq-slider" min="-12" max="12" value="0" data-band="2" orient="vertical">
+                <span>910Hz</span>
+            </div>
+            <div class="eq-slider-col">
+                <input type="range" class="eq-slider" min="-12" max="12" value="0" data-band="3" orient="vertical">
+                <span>4kHz</span>
+            </div>
+            <div class="eq-slider-col">
+                <input type="range" class="eq-slider" min="-12" max="12" value="0" data-band="4" orient="vertical">
+                <span>14kHz</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MINIMALIST FULLSCREEN FOCUS MODE OVERLAY -->
+    <div id="focusModeOverlay" class="focus-mode-overlay hidden">
+        <div id="focusModeBg" class="focus-mode-bg"></div>
+        <div class="focus-mode-content">
+            <button class="exit-focus-btn" id="exitFocusBtn" title="Exit Focus Mode"><i data-lucide="minimize-2"></i></button>
+            <div class="focus-player-container">
+                <div class="focus-artwork-wrapper">
+                    <img src="" id="focusArtwork" alt="Album Art">
+                </div>
+                <div class="focus-track-info">
+                    <h1 id="focus-title">Select a track</h1>
+                    <p id="focus-artist">No music playing</p>
+                </div>
+                <div class="focus-progress-row">
+                    <span id="focus-time-current">0:00</span>
+                    <div class="progress-bar-mini focus-progress-bar" id="focusProgressBar">
+                        <div class="progress-fill" id="focusProgressFill"></div>
+                    </div>
+                    <span id="focus-time-total">0:00</span>
+                </div>
+                <div class="focus-controls">
+                    <button class="focus-control-btn" id="focusShuffleBtn" title="Shuffle"><i data-lucide="shuffle"></i></button>
+                    <button class="focus-control-btn" id="focusPrevBtn" title="Previous"><i data-lucide="skip-back"></i></button>
+                    <button class="focus-control-btn focus-play-btn" id="focusPlayPauseBtn" title="Play"><i data-lucide="play"></i></button>
+                    <button class="focus-control-btn" id="focusNextBtn" title="Next"><i data-lucide="skip-forward"></i></button>
+                    <button class="focus-control-btn" id="focusRepeatBtn" title="Repeat"><i data-lucide="repeat"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spotify Style Bottom Player Control Bar -->
+    <footer class="player-bar">
+        <!-- Left Section: Track Info, Square Art, and Like button -->
+        <div class="player-left-controls">
+            <div class="album-art-wrapper-mini">
+                <div class="album-art-mini" id="vinylArt"></div>
+            </div>
+            <div class="player-track-info">
+                <h5 id="footer-title" class="player-title">Select a folder</h5>
+                <p id="footer-artist" class="player-artist">No tracks loaded</p>
+            </div>
+            <button class="control-btn heart-btn" id="likeBtn" title="Save to Your Library">
+                <i data-lucide="heart"></i>
+            </button>
+            
+            <!-- Hidden placeholder elements to prevent JS errors -->
+            <div class="hidden-metadata-placeholders" style="display: none !important;">
+                <h5 id="ui-title">Select a folder</h5>
+                <p id="ui-artist">No tracks loaded</p>
+                <span class="format-badge" id="ui-format">MP3</span>
+            </div>
+        </div>
+
+        <!-- Center Section: Playback controls and progress bar -->
+        <div class="player-center-controls">
+            <div class="center-buttons-row">
+                <button class="control-btn" id="shuffleBtn" title="Shuffle"><i data-lucide="shuffle"></i></button>
+                <button class="control-btn" id="prevBtn" title="Previous"><i data-lucide="skip-back"></i></button>
+                <button class="control-btn play-btn" id="playPauseBtn" title="Play"><i data-lucide="play"></i></button>
+                <button class="control-btn" id="nextBtn" title="Next"><i data-lucide="skip-forward"></i></button>
+                <button class="control-btn" id="repeatBtn" title="Repeat"><i data-lucide="repeat"></i></button>
+            </div>
+            <div class="progress-bar-row">
+                <span id="time-current">0:00</span>
+                <div class="progress-bar-mini" id="uiProgressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span id="time-total">0:00</span>
+            </div>
+        </div>
+
+        <!-- Right Section: Utilities & speed controls -->
+        <div class="player-right-controls">
+            <button class="control-btn" id="barQueueBtn" title="Queue"><i data-lucide="list-music"></i></button>
+            <button class="control-btn" id="barLyricsBtn" title="Lyrics"><i data-lucide="music-3"></i></button>
+            <button class="control-btn" id="focusModeBtn" title="Focus Mode"><i data-lucide="maximize-2"></i></button>
+            
+            <div class="player-volume-container">
+                <i data-lucide="volume-2" class="volume-icon" id="volumeIcon"></i>
+                <input type="range" id="volumeSlider" min="0" max="100" value="80" class="vol-slider">
+            </div>
+            
+            <select id="playbackSpeedSelector" class="small-select" title="Speed">
+                <option value="0.5">0.5x</option>
+                <option value="1.0" selected>1.0x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2.0">2.0x</option>
+            </select>
+            
+            <button class="control-btn icon-only-btn" id="sleepTimerBtn" title="Sleep Timer"><i data-lucide="timer"></i></button>
+            <button class="control-btn icon-only-btn" id="eqToggleBtn" title="Equalizer"><i data-lucide="sliders"></i></button>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS LOADING -->
+    <script src="js/audio.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
