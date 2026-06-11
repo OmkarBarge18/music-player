@@ -2867,4 +2867,54 @@ body.light-theme .focus-mode-overlay .focus-control-btn:hover {
     .library-grid {
         max-height: none !important;
     }
+    
+    /* Focus Mode mobile optimization */
+    .focus-mode-content {
+        padding: 16px !important;
+        justify-content: center !important;
+        height: 100% !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .exit-focus-btn {
+        top: 20px !important;
+        right: 20px !important;
+        width: 38px !important;
+        height: 38px !important;
+    }
+    
+    .focus-player-container {
+        gap: 20px !important;
+    }
+    
+    .focus-artwork-wrapper {
+        width: 240px !important;
+        height: 240px !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5) !important;
+    }
+    
+    .focus-track-info h1 {
+        font-size: 22px !important;
+    }
+    
+    .focus-track-info p {
+        font-size: 15px !important;
+    }
+    
+    .focus-controls {
+        gap: 20px !important;
+        margin-top: 10px !important;
+    }
+    
+    .focus-control-btn i {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    
+    .focus-play-btn {
+        width: 56px !important;
+        height: 56px !important;
+    }
 }
