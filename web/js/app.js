@@ -43,18 +43,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (barQueueBtn) {
         barQueueBtn.addEventListener('click', () => {
             switchView('queue');
-            navItems.forEach(n => n.classList.remove('active'));
-            const qItem = Array.from(navItems).find(n => n.getAttribute('data-view') === 'queue');
-            if (qItem) qItem.classList.add('active');
+            navItems.forEach(n => {
+                if (n.getAttribute('data-view') === 'queue') {
+                    n.classList.add('active');
+                } else {
+                    n.classList.remove('active');
+                }
+            });
         });
     }
 
     if (barLyricsBtn) {
         barLyricsBtn.addEventListener('click', () => {
             switchView('lyrics');
-            navItems.forEach(n => n.classList.remove('active'));
-            const lItem = Array.from(navItems).find(n => n.getAttribute('data-view') === 'lyrics');
-            if (lItem) lItem.classList.add('active');
+            navItems.forEach(n => {
+                if (n.getAttribute('data-view') === 'lyrics') {
+                    n.classList.add('active');
+                } else {
+                    n.classList.remove('active');
+                }
+            });
         });
     }
 
@@ -69,6 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (focusModeBtn) {
         focusModeBtn.addEventListener('click', () => {
+            if (focusModeOverlay) {
+                focusModeOverlay.classList.remove('hidden');
+                document.body.classList.add('focus-mode-active');
+                syncFocusModeDetails();
+            }
+        });
+    }
+
+    // Tap player left info / artwork to open Focus Mode on mobile
+    const playerLeftControls = document.querySelector('.player-left-controls');
+    if (playerLeftControls) {
+        playerLeftControls.style.cursor = 'pointer';
+        playerLeftControls.addEventListener('click', (e) => {
+            if (e.target.closest('#likeBtn')) return;
             if (focusModeOverlay) {
                 focusModeOverlay.classList.remove('hidden');
                 document.body.classList.add('focus-mode-active');
@@ -237,8 +259,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetView = item.getAttribute('data-view');
             switchView(targetView);
             
-            navItems.forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
+            navItems.forEach(n => {
+                if (n.getAttribute('data-view') === targetView) {
+                    n.classList.add('active');
+                } else {
+                    n.classList.remove('active');
+                }
+            });
         });
     });
 
