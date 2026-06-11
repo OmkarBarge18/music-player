@@ -170,6 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Core DOM Elements
     const views = document.querySelectorAll('.subview');
     const navItems = document.querySelectorAll('.nav-item');
+    const trackListUI = document.getElementById('trackList');
+    const homeTrackListUI = document.getElementById('homeTrackList');
+    const homeSearchInput = document.getElementById('homeSearchInput');
+    let homeTracksListAll = [];
     const playBtn = document.getElementById('playPauseBtn');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
@@ -247,9 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeView) {
             activeView.classList.add('active');
             // Trigger subview updates
-            if (viewId === 'stats') loadStatsDashboard();
             if (viewId === 'playlists') loadPlaylistsLayout();
-            if (viewId === 'audiobooks') loadAudiobooksLayout();
             if (viewId === 'settings') loadSettingsLayout();
         }
     }
@@ -469,38 +471,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     progressBar.addEventListener('click', (e) => {
         const activeAudio = audioEngine.activeAudio;
-        const currentTrack = playlistQueue[currentTrackIndex];
-        if (currentTrack && currentTrack.chapterDuration) {
-            const rect = progressBar.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            const start = currentTrack.startTime || 0;
-            const chapDur = currentTrack.chapterDuration;
-            activeAudio.currentTime = start + pos * chapDur;
-        } else {
-            if (!activeAudio.duration) return;
-            const rect = progressBar.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            activeAudio.currentTime = pos * activeAudio.duration;
-        }
+        if (!activeAudio.duration) return;
+        const rect = progressBar.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        activeAudio.currentTime = pos * activeAudio.duration;
         broadcastSyncCommand();
     });
 
     if (focusProgressBar) {
         focusProgressBar.addEventListener('click', (e) => {
             const activeAudio = audioEngine.activeAudio;
-            const currentTrack = playlistQueue[currentTrackIndex];
-            if (currentTrack && currentTrack.chapterDuration) {
-                const rect = focusProgressBar.getBoundingClientRect();
-                const pos = (e.clientX - rect.left) / rect.width;
-                const start = currentTrack.startTime || 0;
-                const chapDur = currentTrack.chapterDuration;
-                activeAudio.currentTime = start + pos * chapDur;
-            } else {
-                if (!activeAudio.duration) return;
-                const rect = focusProgressBar.getBoundingClientRect();
-                const pos = (e.clientX - rect.left) / rect.width;
-                activeAudio.currentTime = pos * activeAudio.duration;
-            }
+            if (!activeAudio.duration) return;
+            const rect = focusProgressBar.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            activeAudio.currentTime = pos * activeAudio.duration;
             broadcastSyncCommand();
         });
     }
@@ -592,93 +576,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    let lastProgressSaveTime = 0;
-    function handleAudiobookProgressUpdate(audioEl) {
-        if (audioEngine.activeAudio !== audioEl) return;
-        const currentTrack = playlistQueue[currentTrackIndex];
-        if (!currentTrack || !currentTrack.id || !currentTrack.id.startsWith('book-')) return;
-
-        const parts = currentTrack.id.split('-ch-');
-        if (parts.length < 2) return;
-        const bookId = parts[0].substring(5);
-        const chapterIndex = parseInt(parts[1], 10);
-
-        const currentTime = audioEl.currentTime;
-        const offsetInChapter = currentTrack.startTime ? (currentTime - currentTrack.startTime) : currentTime;
-        
-        const now = Date.now();
-        if (now - lastProgressSaveTime >= 5000) {
-            lastProgressSaveTime = now;
-            fetch(`/api/audiobooks/${bookId}/progress`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    resumePosition: {
-                        chapterIndex: chapterIndex,
-                        seconds: Math.round(Math.max(0, offsetInChapter))
-                    }
-                })
-            }).then(res => {
-                if (res.ok) {
-                    if (activeBook && activeBook.id === bookId) {
-                        activeBook.resumePosition = {
-                            chapterIndex: chapterIndex,
-                            seconds: Math.round(Math.max(0, offsetInChapter))
-                        };
-                        updateResumeButtonDisplay();
-                    }
-                }
-            }).catch(err => console.error("Error saving progress:", err));
-        }
-    }
-
-    function checkVirtualChapterEnd(audioEl) {
-        if (audioEngine.activeAudio !== audioEl) return;
-        const currentTrack = playlistQueue[currentTrackIndex];
-        if (currentTrack && currentTrack.id && currentTrack.id.startsWith('book-') && currentTrack.chapterDuration) {
-            const start = currentTrack.startTime || 0;
-            const chapDur = currentTrack.chapterDuration;
-            const elapsed = audioEl.currentTime - start;
-            if (elapsed >= chapDur) {
-                console.log("Virtual chapter completed, playing next.");
-                playNextTrack();
-            }
-        }
-    }
-
     audioEngine.audioA.addEventListener('timeupdate', () => {
         updateProgressUI(audioEngine.audioA);
         checkCrossfadeTiming();
-        checkVirtualChapterEnd(audioEngine.audioA);
-        handleAudiobookProgressUpdate(audioEngine.audioA);
     });
     audioEngine.audioB.addEventListener('timeupdate', () => {
         updateProgressUI(audioEngine.audioB);
         checkCrossfadeTiming();
-        checkVirtualChapterEnd(audioEngine.audioB);
-        handleAudiobookProgressUpdate(audioEngine.audioB);
     });
 
     function updateProgressUI(audioEl) {
         if (audioEngine.activeAudio !== audioEl) return;
-        const currentTrack = playlistQueue[currentTrackIndex];
         let percent = 0;
         let elapsed = 0;
         let total = 0;
 
-        if (currentTrack && currentTrack.chapterDuration) {
-            const start = currentTrack.startTime || 0;
-            total = currentTrack.chapterDuration;
-            elapsed = Math.max(0, audioEl.currentTime - start);
-            percent = Math.min(100, (elapsed / total) * 100);
-            
-            timeCurrent.textContent = formatSeconds(elapsed);
-            if (showRemainingTime) {
-                timeTotal.textContent = "-" + formatSeconds(total - elapsed);
-            } else {
-                timeTotal.textContent = formatSeconds(total);
-            }
-        } else if (audioEl.duration) {
+        if (audioEl.duration) {
             total = audioEl.duration;
             elapsed = audioEl.currentTime;
             percent = (elapsed / total) * 100;
@@ -1255,6 +1168,88 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     }
 
+    function renderHomeTracksTable(tracks) {
+        if (!homeTrackListUI) return;
+        homeTrackListUI.innerHTML = '';
+        if (tracks.length === 0) {
+            homeTrackListUI.innerHTML = "<div style='grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text-muted);'>No tracks loaded. Scan library or add music folders.</div>";
+            return;
+        }
+
+        tracks.forEach(track => {
+            const row = document.createElement('div');
+            row.className = 'track-item';
+            row.setAttribute('data-track-id', track.id);
+            if (playlistQueue[currentTrackIndex] && playlistQueue[currentTrackIndex].id === track.id) {
+                row.classList.add('active-track');
+            }
+
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'track-title-cell';
+            titleSpan.innerHTML = `
+                <i data-lucide="music-2" style="width: 16px; height: 16px; opacity: 0.5;"></i>
+                <span>${track.title || track.name}</span>
+                ${track.isDuplicate ? '<span class="duplicate-warn-tag" title="Duplicate copy indexed">Duplicate</span>' : ''}
+            `;
+
+            const artistSpan = document.createElement('span');
+            artistSpan.textContent = track.artist || 'Unknown Artist';
+
+            const albumSpan = document.createElement('span');
+            albumSpan.textContent = track.album || 'Unknown Album';
+
+            const formatSpan = document.createElement('span');
+            formatSpan.className = 'track-format-cell';
+            formatSpan.textContent = `${track.format || 'MP3'} ${track.bpm ? `(${track.bpm} BPM)` : ''}`;
+
+            const actionCell = document.createElement('span');
+            actionCell.className = 'align-right';
+
+            // Tag edit trigger
+            const tagBtn = document.createElement('button');
+            tagBtn.className = 'row-action-btn';
+            tagBtn.title = 'Edit tag metadata';
+            tagBtn.innerHTML = '<i data-lucide="edit-3"></i>';
+            tagBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openMetadataEditorModal(track);
+            });
+
+            // Playlist add button
+            const addPlayBtn = document.createElement('button');
+            addPlayBtn.className = 'row-action-btn';
+            addPlayBtn.title = 'Add to playlist';
+            addPlayBtn.innerHTML = '<i data-lucide="plus-circle"></i>';
+            addPlayBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                promptAddTrackToPlaylist(track.id);
+            });
+
+            actionCell.appendChild(tagBtn);
+            actionCell.appendChild(addPlayBtn);
+
+            row.appendChild(titleSpan);
+            row.appendChild(artistSpan);
+            row.appendChild(albumSpan);
+            row.appendChild(formatSpan);
+            row.appendChild(actionCell);
+
+            row.addEventListener('click', () => {
+                playlistQueue = tracks.map(t => ({
+                    ...t,
+                    name: t.title || t.name,
+                    path: t.id.startsWith('web-') ? t.path : `/api/tracks/${t.id}/stream`
+                }));
+                const idx = playlistQueue.findIndex(t => t.id === track.id);
+                loadAndPlayTrack(idx);
+            });
+
+            homeTrackListUI.appendChild(row);
+        });
+
+        lucide.createIcons();
+    }
+
     // --- METADATA EDITOR MODAL ---
     const metadataModal = document.getElementById('metadataModal');
     const closeMetaBtn = document.getElementById('closeMetaBtn');
@@ -1299,6 +1294,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.ok) {
                 metadataModal.classList.add('hidden');
                 triggerSearch();
+                updateHomeStats();
             }
         } catch (err) {
             console.error("Failed to save metadata tags:", err);
@@ -1332,108 +1328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- DASHBOARD CHARTS ---
-    let genreChartCanvas = document.getElementById('genreChart');
-    let artistChartCanvas = document.getElementById('artistChart');
 
-    async function loadStatsDashboard() {
-        try {
-            const res = await fetch('/api/stats');
-            const data = await res.json();
-
-            document.getElementById('stats-listening-hours').textContent = `${data.totalListeningHours} hrs`;
-            document.getElementById('stats-total-tracks').textContent = data.totalTracks;
-
-            drawDonutChart(genreChartCanvas, data.genreDistribution);
-            drawBarChart(artistChartCanvas, data.topArtists);
-
-            const topList = document.getElementById('topTracksRankList');
-            topList.innerHTML = '';
-            data.topTracks.forEach(track => {
-                const li = document.createElement('li');
-                li.style.marginBottom = '6px';
-                li.innerHTML = `<strong>${track.title}</strong> by ${track.artist} <span style="color:var(--accent); float:right;">${track.playCount} plays</span>`;
-                topList.appendChild(li);
-            });
-
-        } catch (err) {
-            console.error("Dashboard stats loader error:", err);
-        }
-    }
-
-    function drawDonutChart(canvas, dataList) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        if (!dataList || dataList.length === 0) return;
-        const total = dataList.reduce((acc, curr) => acc + curr.count, 0);
-        
-        const cx = canvas.width / 3;
-        const cy = canvas.height / 2;
-        const radius = Math.min(cx, cy) * 0.75;
-        
-        let startAngle = 0;
-        const colors = ['#00f2fe', '#8a2be2', '#ff007f', '#00ffd2', '#ffd60a'];
-
-        dataList.forEach((item, idx) => {
-            const sliceAngle = (item.count / total) * 2 * Math.PI;
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle);
-            ctx.arc(cx, cy, radius * 0.6, startAngle + sliceAngle, startAngle, true);
-            ctx.fillStyle = colors[idx % colors.length];
-            ctx.fill();
-            startAngle += sliceAngle;
-
-            const legendX = cx * 2 + 10;
-            const legendY = 30 + idx * 24;
-            ctx.fillStyle = colors[idx % colors.length];
-            ctx.beginPath();
-            ctx.roundRect(legendX, legendY - 10, 12, 12, 3);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '11px Outfit';
-            ctx.fillText(`${item.genre} (${item.count})`, legendX + 18, legendY);
-        });
-    }
-
-    // Canvas Bar charts renderer
-    function drawBarChart(canvas, artistsList) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (!artistsList || artistsList.length === 0) return;
-        const maxPlays = Math.max(...artistsList.map(a => a.playCount));
-
-        const margin = 30;
-        const chartHeight = canvas.height - margin * 2;
-        const chartWidth = canvas.width - margin * 2;
-        const barWidth = chartWidth / artistsList.length * 0.6;
-        const gap = chartWidth / artistsList.length * 0.4;
-
-        artistsList.forEach((artist, idx) => {
-            const plays = artist.playCount;
-            const barHeight = (plays / maxPlays) * chartHeight;
-            const x = margin + idx * (barWidth + gap);
-            const y = canvas.height - margin - barHeight;
-
-            const grad = ctx.createLinearGradient(0, canvas.height, 0, y);
-            grad.addColorStop(0, 'rgba(0, 242, 254, 0.2)');
-            grad.addColorStop(1, '#00f2fe');
-
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.roundRect(x, y, barWidth, barHeight, [4, 4, 0, 0]);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '10px Outfit';
-            ctx.fillText(artist.artist.substring(0, 8), x, canvas.height - 15);
-            
-            ctx.fillStyle = 'var(--accent)';
-            ctx.fillText(plays, x + 2, y - 6);
-        });
-    }
 
     // --- PLAYLISTS MODULES ---
     const playlistDetailCol = document.getElementById('playlistDetailCol');
@@ -1667,289 +1562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- AUDIOBOOK HANDLERS ---
-    const audiobooksGrid = document.getElementById('audiobooksGrid');
-    const audiobookPlayerContainer = document.getElementById('audiobookPlayerContainer');
-    const bookChaptersList = document.getElementById('bookChaptersList');
-    const bookBookmarksList = document.getElementById('bookBookmarksList');
-    const closeAudiobookPlayer = document.getElementById('closeAudiobookPlayer');
-    const addBookBtn = document.getElementById('addAudiobookBtn');
-    const addBookmarkBtn = document.getElementById('addBookmarkBtn');
-    const resumeBookBtn = document.getElementById('resumeBookBtn');
-    
-    // Add Audiobook modal elements
-    const audiobookModal = document.getElementById('audiobookModal');
-    const closeBookModalBtn = document.getElementById('closeBookModalBtn');
-    const saveBookModalBtn = document.getElementById('saveBookModalBtn');
-    const chooseBookFilesBtn = document.getElementById('chooseBookFilesBtn');
-    const selectedBookFilesLabel = document.getElementById('selectedBookFilesLabel');
-    const bookFilesInput = document.getElementById('bookFilesInput');
-    const newBookTitle = document.getElementById('newBookTitle');
-    const newBookAuthor = document.getElementById('newBookAuthor');
-    const newBookCover = document.getElementById('newBookCover');
-    const newBookType = document.getElementById('newBookType');
-    
-    let activeBook = null;
-    let selectedBookFiles = []; // Holds selected files paths or web files objects
 
-    closeAudiobookPlayer.addEventListener('click', () => {
-        audiobookPlayerContainer.classList.add('hidden');
-        audiobooksGrid.classList.remove('hidden');
-        activeBook = null;
-    });
-
-    addBookBtn.addEventListener('click', () => {
-        newBookTitle.value = '';
-        newBookAuthor.value = '';
-        newBookCover.value = '';
-        newBookType.value = 'file';
-        selectedBookFilesLabel.textContent = 'No files selected';
-        selectedBookFiles = [];
-        audiobookModal.classList.remove('hidden');
-    });
-
-    closeBookModalBtn.addEventListener('click', () => {
-        audiobookModal.classList.add('hidden');
-    });
-
-    chooseBookFilesBtn.addEventListener('click', () => {
-        if (isElectron) {
-            const type = newBookType.value;
-            const properties = type === 'file' ? ['openFile'] : ['openFile', 'multiSelections'];
-            window.electronAPI.openFiles({ properties }).then(paths => {
-                if (paths && paths.length > 0) {
-                    selectedBookFiles = paths;
-                    selectedBookFilesLabel.textContent = `${paths.length} file(s) selected: ${paths.map(p => p.split(/[\\/]/).pop()).join(', ')}`;
-                }
-            });
-        } else {
-            bookFilesInput.click();
-        }
-    });
-
-    bookFilesInput.addEventListener('change', (e) => {
-        const files = e.target.files;
-        if (!files || files.length === 0) return;
-        
-        selectedBookFiles = Array.from(files).map(f => ({
-            name: f.name,
-            path: URL.createObjectURL(f)
-        }));
-        
-        selectedBookFilesLabel.textContent = `${files.length} file(s) selected: ${selectedBookFiles.map(f => f.name).join(', ')}`;
-    });
-
-    saveBookModalBtn.addEventListener('click', async () => {
-        const title = newBookTitle.value.trim();
-        const author = newBookAuthor.value.trim();
-        const coverUrl = newBookCover.value.trim();
-        const type = newBookType.value;
-
-        if (!title || !author) {
-            alert("Title and Author are required.");
-            return;
-        }
-        if (selectedBookFiles.length === 0) {
-            alert("Please select audiobook file(s).");
-            return;
-        }
-
-        let paths = [];
-        let filenames = [];
-        if (isElectron) {
-            paths = selectedBookFiles;
-        } else {
-            paths = selectedBookFiles.map(f => f.path);
-            filenames = selectedBookFiles.map(f => f.name);
-        }
-
-        try {
-            const res = await fetch('/api/audiobooks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, author, coverUrl, type, paths, filenames })
-            });
-            if (res.ok) {
-                audiobookModal.classList.add('hidden');
-                loadAudiobooksLayout();
-            } else {
-                const data = await res.json();
-                alert(data.error || "Failed to add audiobook");
-            }
-        } catch (err) {
-            console.error("Error adding book:", err);
-            alert("Error adding audiobook.");
-        }
-    });
-
-    async function loadAudiobooksLayout() {
-        audiobooksGrid.innerHTML = '';
-        audiobookPlayerContainer.classList.add('hidden');
-        audiobooksGrid.classList.remove('hidden');
-
-        try {
-            const res = await fetch('/api/audiobooks');
-            const books = await res.json();
-
-            books.forEach(book => {
-                const card = document.createElement('div');
-                card.className = 'media-card glass-panel';
-                card.innerHTML = `
-                    <img src="${book.coverUrl}" alt="${book.title}" style="width: 100%; height: 180px; object-fit: cover; border-radius: 8px;">
-                    <h4 style="margin-top: 10px; font-size: 14px; font-weight: 600;">${book.title}</h4>
-                    <p style="font-size: 11px; color: var(--text-muted);">${book.author}</p>
-                `;
-                card.addEventListener('click', () => {
-                    openAudiobookDetail(book);
-                });
-                audiobooksGrid.appendChild(card);
-            });
-        } catch (err) {
-            console.error(err);
-        }
-    }
-
-    async function openAudiobookDetail(book) {
-        activeBook = book;
-        audiobooksGrid.classList.add('hidden');
-        audiobookPlayerContainer.classList.remove('hidden');
-        document.getElementById('selectedBookTitle').textContent = `Syncing Book Details...`;
-
-        try {
-            const res = await fetch(`/api/audiobooks/${book.id}`);
-            if (res.ok) {
-                activeBook = await res.json();
-            }
-        } catch (err) {
-            console.error("Failed to sync audiobook progress from server:", err);
-        }
-
-        document.getElementById('selectedBookTitle').textContent = `${activeBook.title} by ${activeBook.author}`;
-        updateResumeButtonDisplay();
-        renderChaptersList();
-        renderBookmarksList();
-    }
-
-    function updateResumeButtonDisplay() {
-        if (!resumeBookBtn || !activeBook) return;
-        const resumePos = activeBook.resumePosition || { chapterIndex: 0, seconds: 0 };
-        resumeBookBtn.innerHTML = `<i data-lucide="play" style="width: 14px; height: 14px; margin-right: 4px;"></i> Resume: Ch ${resumePos.chapterIndex + 1} at ${formatSeconds(resumePos.seconds)}`;
-        lucide.createIcons();
-    }
-
-    function playBookChapter(chapterIndex, seekSeconds = 0) {
-        if (!activeBook || !activeBook.chapters || activeBook.chapters.length === 0) return;
-        
-        playlistQueue = activeBook.chapters.map(ch => ({
-            id: `book-${activeBook.id}-ch-${ch.index}`,
-            name: `${activeBook.title} - ${ch.title}`,
-            title: `${activeBook.title} - ${ch.title}`,
-            path: ch.path.startsWith('blob:') || ch.path.startsWith('data:') ? ch.path : `/api/stream?path=${encodeURIComponent(ch.path)}`,
-            artist: activeBook.author,
-            format: 'MP3',
-            startTime: ch.start || 0,
-            chapterDuration: ch.duration
-        }));
-        
-        const targetChapter = playlistQueue[chapterIndex];
-        if (targetChapter) {
-            const originalStart = targetChapter.startTime || 0;
-            const seekTime = originalStart + seekSeconds;
-            loadAndPlayTrack(chapterIndex, seekTime);
-        }
-    }
-
-    resumeBookBtn.addEventListener('click', () => {
-        if (!activeBook) return;
-        const resumePos = activeBook.resumePosition || { chapterIndex: 0, seconds: 0 };
-        playBookChapter(resumePos.chapterIndex, resumePos.seconds);
-    });
-
-    function renderChaptersList() {
-        bookChaptersList.innerHTML = '';
-        activeBook.chapters.forEach(chap => {
-            const el = document.createElement('div');
-            el.className = 'chapter-item';
-            el.style.display = 'flex';
-            el.style.justifyContent = 'space-between';
-            el.style.alignItems = 'center';
-            el.style.padding = '8px 12px';
-            el.style.background = 'rgba(255, 255, 255, 0.02)';
-            el.style.border = '1px solid var(--glass-border)';
-            el.style.borderRadius = '8px';
-            el.style.cursor = 'pointer';
-            el.style.marginBottom = '6px';
-            el.innerHTML = `<span>${chap.title}</span> <span style="color:var(--text-muted); font-size: 11px;">${Math.round(chap.duration / 60)}m</span>`;
-            el.addEventListener('click', () => {
-                playBookChapter(chap.index, 0);
-            });
-            bookChaptersList.appendChild(el);
-        });
-    }
-
-    function renderBookmarksList() {
-        bookBookmarksList.innerHTML = '';
-        const bookmarks = activeBook.bookmarks || [];
-        if (bookmarks.length === 0) {
-            bookBookmarksList.innerHTML = "<div style='font-size:11px; color:var(--text-muted); padding:10px;'>No bookmarks saved.</div>";
-            return;
-        }
-
-        bookmarks.forEach((b, idx) => {
-            const el = document.createElement('div');
-            el.className = 'bookmark-item';
-            el.style.display = 'flex';
-            el.style.justifyContent = 'space-between';
-            el.style.alignItems = 'center';
-            el.style.padding = '8px 12px';
-            el.style.background = 'rgba(255, 255, 255, 0.02)';
-            el.style.border = '1px solid var(--glass-border)';
-            el.style.borderRadius = '8px';
-            el.style.cursor = 'pointer';
-            el.style.marginBottom = '6px';
-            el.innerHTML = `<span>Chapter ${b.chapterIndex + 1} at ${formatSeconds(b.seconds)}</span> <span style="font-size:10px; color:var(--accent);">${b.note}</span>`;
-            el.addEventListener('click', () => {
-                playBookChapter(b.chapterIndex, b.seconds);
-            });
-            bookBookmarksList.appendChild(el);
-        });
-    }
-
-    addBookmarkBtn.addEventListener('click', async () => {
-        if (!activeBook) return;
-        const note = prompt("Enter brief note for this bookmark:", "Chapter marker");
-        if (note === null) return;
-
-        const currentTrack = playlistQueue[currentTrackIndex];
-        let relativeSeconds = Math.round(audioEngine.activeAudio.currentTime || 0);
-        let currentChap = 0;
-        
-        if (currentTrack && currentTrack.id && currentTrack.id.startsWith('book-')) {
-            const parts = currentTrack.id.split('-ch-');
-            if (parts.length >= 2) {
-                currentChap = parseInt(parts[1], 10);
-            }
-            if (currentTrack.chapterDuration) {
-                const start = currentTrack.startTime || 0;
-                relativeSeconds = Math.round(Math.max(0, (audioEngine.activeAudio.currentTime || 0) - start));
-            }
-        }
-
-        const newBookmark = { chapterIndex: currentChap, seconds: relativeSeconds, note };
-        activeBook.bookmarks = activeBook.bookmarks || [];
-        activeBook.bookmarks.push(newBookmark);
-
-        try {
-            const res = await fetch(`/api/audiobooks/${activeBook.id}/progress`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bookmarks: activeBook.bookmarks })
-            });
-            if (res.ok) renderBookmarksList();
-        } catch (err) {
-            console.error(err);
-        }
-    });
 
     // --- SYSTEM SETTINGS CONFIGURATIONS ---
     const settingsFoldersList = document.getElementById('settingsFoldersList');
@@ -2155,17 +1768,43 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch('/api/tracks');
             const tracks = await res.json();
+            homeTracksListAll = tracks;
             const countEl = document.getElementById('home-total-tracks');
             if (countEl) {
                 countEl.textContent = `${tracks.length} tracks loaded`;
             }
-            const homeTotalTracksHeader = document.getElementById('home-total-tracks');
-            if (homeTotalTracksHeader) {
-                homeTotalTracksHeader.textContent = `${tracks.length} tracks loaded`;
+            const query = homeSearchInput ? homeSearchInput.value.toLowerCase().trim() : '';
+            if (query) {
+                const filtered = homeTracksListAll.filter(t => {
+                    const title = (t.title || t.name || '').toLowerCase();
+                    const artist = (t.artist || '').toLowerCase();
+                    const album = (t.album || '').toLowerCase();
+                    return title.includes(query) || artist.includes(query) || album.includes(query);
+                });
+                renderHomeTracksTable(filtered);
+            } else {
+                renderHomeTracksTable(homeTracksListAll);
             }
         } catch (err) {
             console.error("Failed to load home tracks count:", err);
         }
+    }
+
+    if (homeSearchInput) {
+        homeSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (!query) {
+                renderHomeTracksTable(homeTracksListAll);
+            } else {
+                const filtered = homeTracksListAll.filter(t => {
+                    const title = (t.title || t.name || '').toLowerCase();
+                    const artist = (t.artist || '').toLowerCase();
+                    const album = (t.album || '').toLowerCase();
+                    return title.includes(query) || artist.includes(query) || album.includes(query);
+                });
+                renderHomeTracksTable(filtered);
+            }
+        });
     }
     updateHomeStats();
 

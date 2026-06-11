@@ -48,8 +48,7 @@ const initialDb = {
         }
     ],
     history: [],
-    podcasts: [],
-    audiobooks: []
+    podcasts: []
 };
 
 // Initialize DB if not exists
@@ -384,44 +383,7 @@ export function getStats() {
     };
 }
 
-// --- AUDIOBOOKS ---
 
-export function getAudiobooks() {
-    const db = readDb();
-    return db.audiobooks;
-}
-
-export function getAudiobookById(id) {
-    const db = readDb();
-    return db.audiobooks.find(b => b.id === id) || null;
-}
-
-export function addAudiobook(book) {
-    const db = readDb();
-    book.id = book.id || makeId();
-    book.chapters = book.chapters || [];
-    book.resumePosition = book.resumePosition || { chapterIndex: 0, seconds: 0 };
-    book.bookmarks = book.bookmarks || [];
-    db.audiobooks.push(book);
-    writeDb(db);
-    return book;
-}
-
-export function updateAudiobookProgress(bookId, progressData) {
-    const db = readDb();
-    const book = db.audiobooks.find(b => b.id === bookId);
-    if (book) {
-        if (progressData.resumePosition) {
-            book.resumePosition = progressData.resumePosition;
-        }
-        if (progressData.bookmarks) {
-            book.bookmarks = progressData.bookmarks;
-        }
-        writeDb(db);
-        return book;
-    }
-    return null;
-}
 
 // --- FRIEND ACTIVITY ---
 // Removed social activity systems

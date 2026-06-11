@@ -21,10 +21,6 @@ import {
     authenticate,
     addToHistory,
     getStats,
-    getAudiobooks,
-    getAudiobookById,
-    addAudiobook,
-    updateAudiobookProgress,
     updateTrack,
     addUser,
     deletePlaylist,
@@ -382,125 +378,7 @@ app.post('/api/organize', async (req, res) => {
 
 
 
-// Audiobooks API
-app.get('/api/audiobooks', (req, res) => {
-    res.json(getAudiobooks());
-});
 
-app.get('/api/audiobooks/:id', (req, res) => {
-    const book = getAudiobookById(req.params.id);
-    if (!book) return res.status(404).json({ error: "Audiobook not found" });
-    res.json(book);
-});
-
-app.post('/api/audiobooks', async (req, res) => {
-    const { title, author, coverUrl, type, paths, filenames } = req.body;
-    if (!title || !author || !paths || !Array.isArray(paths) || paths.length === 0) {
-        return res.status(400).json({ error: "title, author, and paths array are required" });
-    }
-
-    try {
-        let chapters = [];
-        const isBlob = paths.some(p => p.startsWith('blob:') || p.startsWith('data:'));
-
-        if (type === 'file') {
-            const filePath = paths[0];
-            if (!isBlob && !fs.existsSync(filePath)) {
-                return res.status(400).json({ error: "Audiobook file does not exist on disk" });
-            }
-            
-            let duration = 3600; // default 1 hour
-            let hasChapters = false;
-            let metadataChapters = [];
-
-            if (!isBlob) {
-                try {
-                    const metadata = await parseAudioFile(filePath);
-                    duration = metadata.format.duration || 0;
-                    if (metadata.common && metadata.common.chapters && metadata.common.chapters.length > 0) {
-                        hasChapters = true;
-                        metadataChapters = metadata.common.chapters;
-                    }
-                } catch (err) {
-                    console.error("Error parsing audiobook file:", err);
-                }
-            }
-
-            if (hasChapters) {
-                chapters = metadataChapters.map((ch, idx) => {
-                    const startSec = ch.sampleOffset ? ch.sampleOffset / (44100) : 0;
-                    return {
-                        index: idx,
-                        title: ch.title || `Chapter ${idx + 1}`,
-                        path: filePath,
-                        start: startSec,
-                        duration: ch.durationOffset ? ch.durationOffset / (44100) : 300
-                    };
-                });
-            } else {
-                const partLen = 600; // 10 minutes
-                const count = Math.ceil(duration / partLen) || 1;
-                for (let i = 0; i < count; i++) {
-                    chapters.push({
-                        index: i,
-                        title: `Part ${i + 1}`,
-                        path: filePath,
-                        start: i * partLen,
-                        duration: i === count - 1 ? duration - (i * partLen) : partLen
-                    });
-                }
-            }
-        } else {
-            const sortedPaths = [...paths].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-            for (let i = 0; i < sortedPaths.length; i++) {
-                const p = sortedPaths[i];
-                if (isBlob || fs.existsSync(p)) {
-                    let chTitle = (filenames && filenames[i]) ? filenames[i].replace(/\.[^/.]+$/, "") : `Chapter ${i + 1}`;
-                    let duration = 600; // default 10 minutes
-                    
-                    if (!isBlob) {
-                        try {
-                            const metadata = await parseAudioFile(p);
-                            chTitle = metadata.common.title || path.basename(p, path.extname(p));
-                            duration = metadata.format.duration || 0;
-                        } catch (err) {
-                            console.error(`Error parsing chapter file ${p}:`, err.message);
-                        }
-                    }
-                    
-                    chapters.push({
-                        index: i,
-                        title: chTitle,
-                        path: p,
-                        start: 0,
-                        duration
-                    });
-                }
-            }
-        }
-
-        const newBook = {
-            title,
-            author,
-            coverUrl: coverUrl || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=250&h=250&q=80',
-            type,
-            chapters,
-            resumePosition: { chapterIndex: 0, seconds: 0 },
-            bookmarks: []
-        };
-
-        const saved = addAudiobook(newBook);
-        res.json(saved);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.put('/api/audiobooks/:id/progress', (req, res) => {
-    const book = updateAudiobookProgress(req.params.id, req.body);
-    if (!book) return res.status(404).json({ error: "Audiobook not found" });
-    res.json(book);
-});
 
 // Social Friend Activity API (Removed)
 

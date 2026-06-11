@@ -63,8 +63,7 @@
                 <button class="nav-item" data-view="queue"><i data-lucide="list-music"></i> Play Queue</button>
                 <button class="nav-item" data-view="search"><i data-lucide="search"></i> Search</button>
                 <button class="nav-item" data-view="playlists"><i data-lucide="music-4"></i> Playlists</button>
-                <button class="nav-item" data-view="audiobooks"><i data-lucide="book-open"></i> Audiobooks</button>
-                <button class="nav-item" data-view="stats"><i data-lucide="bar-chart-3"></i> Statistics</button>
+
                 <button class="nav-item" data-view="settings"><i data-lucide="settings"></i> Settings</button>
             </nav>
         </aside>
@@ -123,7 +122,13 @@
                 <h3 class="section-title">Algorithmic Smart Playlists</h3>
                 <div class="smart-playlists-grid" id="smartPlaylistsGrid"></div>
 
-                <h3 class="section-title" style="margin-top: 30px;">All Songs</h3>
+                <div class="section-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px;">
+                    <h3 class="section-title" style="margin: 0;">All Songs</h3>
+                    <div class="search-bar-wrapper" style="width: 250px; margin: 0; padding: 6px 12px; height: 36px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="search" class="search-icon" style="width: 14px; height: 14px; flex-shrink: 0; position: static;"></i>
+                        <input type="text" id="homeSearchInput" placeholder="Filter songs..." style="font-size: 13px; background: transparent; border: none; outline: none; color: var(--text-main); width: 100%;">
+                    </div>
+                </div>
                 <div class="track-table-header">
                     <span>Title</span>
                     <span>Artist</span>
@@ -243,75 +248,7 @@
 
 
 
-            <!-- AUDIOBOOKS VIEW -->
-            <div id="view-audiobooks" class="subview">
-                <div class="playlist-header-row">
-                    <h2 class="view-header">Audiobook Library</h2>
-                    <button class="action-btn" id="addAudiobookBtn"><i data-lucide="plus"></i> Add Book</button>
-                </div>
-                <div class="audiobooks-grid" id="audiobooksGrid"></div>
-                <div class="audiobook-player-container glass-panel hidden" id="audiobookPlayerContainer">
-                    <button class="back-link-btn" id="closeAudiobookPlayer"><i data-lucide="arrow-left"></i> Back to Books</button>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-                        <h3 id="selectedBookTitle" style="margin: 0;">Book Title</h3>
-                        <button class="action-btn" id="resumeBookBtn" style="padding: 6px 12px; font-size: 13.5px;"><i data-lucide="play" style="width: 14px; height: 14px; margin-right: 4px;"></i> Resume Playback</button>
-                    </div>
-                    <div class="chapters-layout">
-                        <div class="chapters-col">
-                            <h4>Chapters</h4>
-                            <div class="chapters-list" id="bookChaptersList"></div>
-                        </div>
-                        <div class="bookmarks-col">
-                            <div class="bookmark-header">
-                                <h4>Bookmarks & Resume</h4>
-                                <button class="small-action-btn" id="addBookmarkBtn"><i data-lucide="bookmark"></i> Bookmark Position</button>
-                            </div>
-                            <div class="bookmarks-list" id="bookBookmarksList"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- VIDEOS VIEW REMOVED -->
-
-            <!-- STATISTICS VIEW -->
-            <div id="view-stats" class="subview">
-                <h2 class="view-header">Listening Statistics Dashboard</h2>
-                <div class="stats-row">
-                    <div class="stats-card glass-panel">
-                        <i data-lucide="clock" class="card-icon"></i>
-                        <div class="info">
-                            <h3 id="stats-listening-hours">0 hrs</h3>
-                            <p>Listening Hours</p>
-                        </div>
-                    </div>
-                    <div class="stats-card glass-panel">
-                        <i data-lucide="music" class="card-icon"></i>
-                        <div class="info">
-                            <h3 id="stats-total-tracks">0</h3>
-                            <p>Library Size</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="charts-layout">
-                    <div class="chart-card glass-panel">
-                        <h3>Genre Distribution</h3>
-                        <canvas id="genreChart" width="300" height="200"></canvas>
-                    </div>
-                    <div class="chart-card glass-panel">
-                        <h3>Top Artists Play Count</h3>
-                        <canvas id="artistChart" width="300" height="200"></canvas>
-                    </div>
-                </div>
-                
-                <div class="top-ranking-row">
-                    <div class="ranking-card glass-panel">
-                        <h3>Top Tracks Overall</h3>
-                        <ol id="topTracksRankList"></ol>
-                    </div>
-                </div>
-            </div>
 
             <!-- SOCIAL VIEW REMOVED -->
 
@@ -477,8 +414,7 @@
         </div>
     </div>
 
-    <!-- HIDDEN INPUT FILE PICKER FOR AUDIOBOOKS -->
-    <input type="file" id="bookFilesInput" multiple class="hidden-input">
+
 
     <!-- CREATE PLAYLIST MODAL -->
     <div class="modal-overlay hidden" id="playlistCreateModal">
@@ -501,42 +437,7 @@
         </div>
     </div>
 
-    <!-- ADD AUDIOBOOK MODAL -->
-    <div class="modal-overlay hidden" id="audiobookModal">
-        <div class="modal-content glass-panel">
-            <h3>Add Audiobook to Library</h3>
-            <div class="modal-body scrollable-modal-body">
-                <div class="input-group">
-                    <label>Title</label>
-                    <input type="text" id="newBookTitle" placeholder="Audiobook Title">
-                </div>
-                <div class="input-group" style="margin-top: 8px;">
-                    <label>Author</label>
-                    <input type="text" id="newBookAuthor" placeholder="Author Name">
-                </div>
-                <div class="input-group" style="margin-top: 8px;">
-                    <label>Cover Art URL</label>
-                    <input type="text" id="newBookCover" placeholder="https://images.unsplash.com/... or leave blank">
-                </div>
-                <div class="input-group" style="margin-top: 8px;">
-                    <label>Source Type</label>
-                    <select id="newBookType">
-                        <option value="file">Single Audiobook File (M4B, MP3, etc.)</option>
-                        <option value="folder">Folder of Chapters (Multiple Files)</option>
-                    </select>
-                </div>
-                <div class="input-group" id="bookFileSelectionArea" style="margin-top: 8px;">
-                    <label>Audio Files</label>
-                    <button class="action-btn border-btn" id="chooseBookFilesBtn" style="width: 100%; justify-content: center;"><i data-lucide="music-3"></i> Select Audio Files</button>
-                    <span id="selectedBookFilesLabel" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; text-align: center; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">No files selected</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="action-btn border-btn" id="closeBookModalBtn">Cancel</button>
-                <button class="action-btn" id="saveBookModalBtn">Add Book</button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- EQUALIZER PANEL FLOATING BOX -->
     <div class="eq-overlay-panel glass-panel hidden" id="eqPanel">
@@ -593,6 +494,11 @@
                 </div>
                 <div class="focus-progress-row">
                     <span id="focus-time-current">0:00</span>
+                    <div class="playing-eq-visualizer focus-eq-viz">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
                     <div class="progress-bar-mini focus-progress-bar" id="focusProgressBar">
                         <div class="progress-fill" id="focusProgressFill"></div>
                     </div>
@@ -643,6 +549,11 @@
             </div>
             <div class="progress-bar-row">
                 <span id="time-current">0:00</span>
+                <div class="playing-eq-visualizer">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
                 <div class="progress-bar-mini" id="uiProgressBar">
                     <div class="progress-fill" id="progressFill"></div>
                 </div>

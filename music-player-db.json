@@ -24,10 +24,10 @@
       "hasArt": true,
       "format": "MP3",
       "id": "i4gws5bvc",
-      "playCount": 9,
+      "playCount": 10,
       "rating": 0,
       "addedAt": "2026-06-09T13:06:10.392Z",
-      "lastPlayedAt": "2026-06-10T14:31:56.324Z"
+      "lastPlayedAt": "2026-06-11T08:24:33.978Z"
     },
     {
       "path": "C:\\Users\\Omkar\\Music\\noodles\\1. Albums\\1995.02.24 - 重力泥棒\\02. Brain Child.mp3",
@@ -5967,6 +5967,12 @@
       "userId": "admin",
       "trackId": "i4gws5bvc",
       "timestamp": "2026-06-10T14:31:56.305Z"
+    },
+    {
+      "id": "m48ri7ckl",
+      "userId": "admin",
+      "trackId": "i4gws5bvc",
+      "timestamp": "2026-06-11T08:24:33.962Z"
     }
   ],
   "podcasts": [],
