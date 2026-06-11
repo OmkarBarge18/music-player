@@ -1,0 +1,8 @@
+{
+  "appId": "com.omkarbarge.auraplayer",
+  "appName": "Aura Player",
+  "webDir": "web",
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -6,7 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "electron .",
-    "server": "node server.js"
+    "server": "node server.js",
+    "dist": "electron-builder",
+    "cap:init": "cap init AuraPlayer com.omkarbarge.auraplayer --web-dir=web",
+    "cap:sync": "cap sync",
+    "cap:open": "cap open android"
   },
   "keywords": [
     "music",
@@ -17,6 +21,8 @@
   "author": "Antigravity",
   "license": "MIT",
   "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "mime-types": "^2.1.35",
@@ -25,6 +31,31 @@
     "ws": "^8.17.0"
   },
   "devDependencies": {
-    "electron": "^31.0.0"
+    "@capacitor/cli": "^6.0.0",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.omkarbarge.auraplayer",
+    "productName": "Aura Player",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**/*",
+      "!android/**/*",
+      "!node_modules/*-builder/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

@@ -4,7 +4,30 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'music-player-db.json');
+
+let dataDir = __dirname;
+try {
+    const electron = await import('electron');
+    if (electron.app) {
+        dataDir = electron.app.getPath('userData');
+    } else if (electron.default && electron.default.app) {
+        dataDir = electron.default.app.getPath('userData');
+    }
+} catch (e) {
+    dataDir = process.env.APPDATA || 
+              (process.platform === 'darwin' ? path.join(process.env.HOME, 'Library', 'Application Support') : 
+               path.join(process.env.HOME, '.config'));
+    if (!dataDir) {
+        dataDir = __dirname;
+    }
+}
+
+// Ensure the directory exists
+try {
+    fs.mkdirSync(dataDir, { recursive: true });
+} catch (e) {}
+
+const DB_FILE = path.join(dataDir, 'music-player-db.json');
 
 const initialDb = {
     folders: [],
